@@ -148,6 +148,17 @@ def addGoogleDocLink(stream, subject, msg, args):
 		return
 	ctf.googleDocLink = args[0]
 
+def helper(stream, subject, msg, args):
+	send_message(stream, subject, """
+ac/addchallenge/addchall [category] [name]: add a new challenge
+w/work/working: mark yourself as working on the challenge of current topic
+solve/solved: mark the challenge of current topic as solved
+s/status: inspect status of current CTF
+ls/links: summarize all links sent in current topic
+fs/files: summarize all files uploaded in current topic
+h/helper: show this helper message
+""")
+
 cmd_processor = dict(
 	ac=add_chall, addchallenge=add_chall, addchall=add_chall,
 	w=working, work=working, working=working,
@@ -155,7 +166,8 @@ cmd_processor = dict(
 	s=status, status=status,
 	ls=get_links, links=get_links,
 	fs=get_files, files=get_files,
-	gd=addGoogleDocLink, googledoc=addGoogleDocLink)
+	gd=addGoogleDocLink, googledoc=addGoogleDocLink,
+	h=helper, help=helper)
 
 def proc_cmd(stream, subject, msg, cmd):
 	f = cmd_processor.get(cmd[0].lower())
