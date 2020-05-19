@@ -1,6 +1,7 @@
 import zulip
 import re
 from datetime import datetime
+from repeater import Repeater
 client = zulip.Client(config_file="./zuliprc")
 # result = client.list_subscriptions()
 # result = client.get_streams()
@@ -192,6 +193,7 @@ def proc_normal_msg(stream, subject, content, msg):
 			chall.links.append(( \
 				msg['sender_full_name'], msg['timestamp'], content))
 
+repeater = Repeater(send_message, 3)
 def msg_handler(msg):
 	if msg['type'] != 'stream' or msg['sender_full_name'] == "CTF":
 		return # ignore private msg and msg sent by itself
@@ -203,10 +205,11 @@ def msg_handler(msg):
 		if res['result'] != 'success':
 			send_message(stream, subject, str(res))
 		# add subscription if bot is mentioned
-	elif content[0] == '!':
+	if content[0] == '!':
 		proc_cmd(stream, subject, msg, content[1:].split())
 	else:
 		proc_normal_msg(stream, subject, content, msg)
+		repeater.update(stream, subject, content)
 
 
 
@@ -214,7 +217,9 @@ event_queue = client.register(
 	event_types=['message']
 )
 last_event_id = -1
+
 while True:
+	print (event_queue)
 	events = client.get_events(queue_id=event_queue['queue_id'],
 		last_event_id=last_event_id, dont_block=True)
 	if events['result'] != 'success':
