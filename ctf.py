@@ -211,22 +211,23 @@ def msg_handler(msg):
 		proc_normal_msg(stream, subject, content, msg)
 		repeater.update(stream, subject, content)
 
+def create_event_queue():
+	while True:
+		event_queue = client.register(
+			event_types=['message'])
+		if event_queue['result'] == 'success':
+			break
+		sleep(1)
+	return (event_queue, event_queue['last_event_id'])
 
-
-event_queue = client.register(
-	event_types=['message']
-)
-last_event_id = -1
-
+event_queue, last_event_id = create_event_queue()
 while True:
 	print (event_queue)
 	events = client.get_events(queue_id=event_queue['queue_id'],
 		last_event_id=last_event_id, dont_block=True)
 	if events['result'] != 'success':
 		print ("Error: %s, reinitializing..." % str(events))
-		event_queue = client.register(
-			event_types=['message'])
-		last_event_id = -1
+		event_queue, last_event_id = create_event_queue()
 		continue
 	for e in events['events']:
 		if e['type'] != 'message':
