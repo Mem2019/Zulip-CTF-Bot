@@ -19,6 +19,11 @@ def get_ctf(name):
 		tmp = CTF()
 		ctfs[name] = tmp
 	return tmp
+def get_chall(ctf, chall):
+	ctf = get_ctf(ctf)
+	separator = chall.find('-')
+	if separator >= 0:
+		return ctf.get_chall(chall[:separator], chall[separator+1:])
 
 def send_message(stream, subject, msg):
 	msg_ = dict(type = 'stream',
@@ -130,6 +135,7 @@ def addNotion(stream, subject, msg, args):
 		ctf.notion = NotionCTF(token_v2 ,args[0])
 	except Exception as e:
 		send_message(stream, subject, "Error, failed to create notion")
+		raise e
 
 def helper(stream, subject, msg, args):
 	send_message(stream, subject, """

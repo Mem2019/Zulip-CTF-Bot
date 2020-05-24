@@ -17,20 +17,21 @@ class NotionCTF:
 	STATUS_TOSTR = ['in progress 🤔', 'stuck 😣', 'solved 😎']
 	def _set_status(status):
 		return NotionCTF.STATUS_TOSTR[status]
-	def _get_subscribers(client):
+	def _get_subscribers(client, token_v2):
 		r = requests.post("https://www.notion.so/api/v3/getSubscriptionData", \
 			json=({'spaceId': client.current_space.id}), \
 			cookies={'token_v2':token_v2})
 		ret = dict()
 		for user in r.json()['members']:
-			ret[user.given_name] = User(client=client, id=x['userId'])
+			user_ = User(client=client, id=user['userId'])
+			ret[user_.given_name] = user_
 		return ret
 
 	def __init__(self, token_v2, url):
+		self.token_v2 = token_v2
 		self.client = NotionClient(token_v2=token_v2)
-		self.users = _get_subscribers(self.client)
+		self.users = NotionCTF._get_subscribers(self.client, token_v2)
 		self.cv = self.client.get_collection_view(url)
-		self._init_users()
 
 	# update all challenges, except those in `updated`,
 	# into Python
@@ -39,23 +40,23 @@ class NotionCTF:
 			updated = []
 		rows = self.cv.collection.get_rows()
 		for row in rows:
+			if row.Name is None or row.Type is None or row.Status is None:
+				continue
 			if row.Type.lower() + '-' + row.Name in updated:
 				continue
-			if row.Name is None or row.Type is None:
-				continue
 			chall = ctf.get_chall(row.Type.lower(), row.Name)
-			chall.solved = _get_status(record.Status)
-			chall.workings = map(lambda x : x.given_name, record.Candidates)
+			chall.solved = NotionCTF._get_status(row.Status)
+			chall.workings = map(lambda x : x.given_name, row.Candidates)
 
 	def _get_user(self, name):
 		r = self.users.get(name)
 		if r:
 			return r
-		self.users = _get_subscribers(self.client)
+		self.users = NotionCTF._get_subscribers(self.client, self.token_v2)
 		return self.users.get(name)
 
 	def _update_row(self, row, challenge):
-		row.Status = _get_status(challenge.solved)
+		row.Status = NotionCTF._set_status(challenge.solved)
 		candidates = []
 		for user in challenge.workings:
 			r2 = self._get_user(user)
@@ -82,7 +83,7 @@ class NotionCTF:
 				idx = to_update[i].find('-')
 				category, name = to_update[i][:idx], to_update[i][idx+1:]
 				challenge = ctf.get_chall(category, name)
-				row = cv.collection.add_row()
+				row = self.cv.collection.add_row()
 				row.Name = name
 				row.Type = category
 				self._update_row(row, challenge)

@@ -26,9 +26,3 @@ class CTF:
 			chall = Challenge()
 			category_[name] = chall
 		return chall
-
-def get_chall(ctf, chall):
-	ctf = get_ctf(ctf)
-	separator = chall.find('-')
-	if separator >= 0:
-		return ctf.get_chall(chall[:separator], chall[separator+1:])
