@@ -2,33 +2,13 @@ import zulip
 import re
 from datetime import datetime
 from repeater import Repeater
+from enum import Enum
+from ctf_type import *
+from notion_sync import *
+
 client = zulip.Client(config_file="./zuliprc")
-# result = client.list_subscriptions()
-# result = client.get_streams()
-# result = client.add_subscriptions(streams=[{'name': "SomeCTF"}])
-# print (result)
-
-class Challenge:
-	def __init__(self):
-		self.solved = False
-		self.workings = set()
-		self.links = []
-		self.files = []
-
-class CTF:
-	def __init__(self):
-		self.challenges = {} # category->Challenge
-		self.googleDocLink = None
-	def get_chall(self, category, name):
-		category_ = self.challenges.get(category);
-		if category_ is None:
-			category_ = {}
-			self.challenges[category] = category_
-		chall = category_.get(name)
-		if chall is None:
-			chall = Challenge()
-			category_[name] = chall
-		return chall
+with open("token_v2", "r") as f:
+	token_v2 = str(f.read()).strip()
 
 ctfs = {}
 
@@ -39,12 +19,6 @@ def get_ctf(name):
 		tmp = CTF()
 		ctfs[name] = tmp
 	return tmp
-
-def get_chall(ctf, chall):
-	ctf = get_ctf(ctf)
-	separator = chall.find('-')
-	if separator >= 0:
-		return ctf.get_chall(chall[:separator], chall[separator+1:])
 
 def send_message(stream, subject, msg):
 	msg_ = dict(type = 'stream',
@@ -74,6 +48,7 @@ def add_chall(stream, subject, msg, args):
 	chall = "%s-%s" % (args[0], args[1]) # get topic name
 	send_message(stream, chall, "New Challenge: %s" % chall) # say sth in topic
 	get_ctf(stream).get_chall(args[0], args[1]) # create the challenge storage
+	return (stream, chall)
 
 def parse_users(users):
 	ret = []
@@ -100,17 +75,19 @@ def working(stream, subject, msg, args):
 			for arg in args:
 				for user in parse_users(arg):
 					chall.workings.add(user)
+		return (stream, subject)
 
 def solved(stream, subject, msg, args):
 	chall = get_chall(stream, subject)
 	if chall is None:
 		send_message(stream, subject, "Error: not a challenge!")
 	else:
-		chall.solved = True
+		chall.solved = ChallState.Solved
 		ret = "Great Work! Thanks to "
 		for solver in chall.workings:
 			ret += "@**%s** " % solver
 		send_message(stream, subject, ret)
+		return (stream, subject)
 
 def status(stream, subject, msg, args):
 	ret = ""
@@ -120,8 +97,10 @@ def status(stream, subject, msg, args):
 		ret += "*** ------------- %s ------------- ***\n" % cate
 		for chall in category:
 			ret += "%s: %s" % (chall, ', '.join(category[chall].workings))
-			if category[chall].solved:
+			if category[chall].solved == ChallState.Solved:
 				ret += " (solved!)"
+			elif category[chall].solved == ChallState.Stuck:
+				ret += " (stuck)"
 			ret += '\n'
 	send_message(stream, subject, ret)
 
@@ -142,12 +121,15 @@ def get_msg(stream, subject, msg, args, get_callback, header):
 get_links = lambda a,b,c,d : get_msg(a,b,c,d,lambda c : c.links, "All links sent in this topic")
 get_files = lambda a,b,c,d : get_msg(a,b,c,d,lambda c : c.files, "All files uploaded in this topic")
 
-def addGoogleDocLink(stream, subject, msg, args):
+def addNotion(stream, subject, msg, args):
 	ctf = get_ctf(stream)
 	if len(args) == 0:
 		send_message(stream, subject, "Error: format is !gd [Google Doc Link]")
 		return
-	ctf.googleDocLink = args[0]
+	try:
+		ctf.notion = NotionCTF(token_v2 ,args[0])
+	except Exception as e:
+		send_message(stream, subject, "Error, failed to create notion")
 
 def helper(stream, subject, msg, args):
 	send_message(stream, subject, """
@@ -167,13 +149,13 @@ cmd_processor = dict(
 	s=status, status=status,
 	ls=get_links, links=get_links,
 	fs=get_files, files=get_files,
-	gd=addGoogleDocLink, googledoc=addGoogleDocLink,
+	gd=addNotion, googledoc=addNotion,
 	h=helper, help=helper)
 
 def proc_cmd(stream, subject, msg, cmd):
 	f = cmd_processor.get(cmd[0].lower())
 	if f:
-		f(stream, subject, msg, cmd[1:])
+		return f(stream, subject, msg, cmd[1:])
 
 reaction = {"丁佬强不强":"丁佬太强了", "成功":"失败"}
 
@@ -206,7 +188,7 @@ def msg_handler(msg):
 			send_message(stream, subject, str(res))
 		# add subscription if bot is mentioned
 	if content[0] == '!':
-		proc_cmd(stream, subject, msg, content[1:].split())
+		return proc_cmd(stream, subject, msg, content[1:].split())
 	else:
 		proc_normal_msg(stream, subject, content, msg)
 		repeater.update(stream, subject, content)
@@ -229,9 +211,20 @@ while True:
 		print ("Error: %s, reinitializing..." % str(events))
 		event_queue, last_event_id = create_event_queue()
 		continue
+	modified = dict()
 	for e in events['events']:
 		if e['type'] != 'message':
 			print ("Unknown type: %s" % e['type'])
 		last_event_id = e['id']
-		msg_handler(e['message'])
+		ret = msg_handler(e['message'])
+		if modified.get(ret[0]):
+			modified[ret[0]].append(ret[1])
+		else:
+			modified[ret[0]] = [ret[1]]
+	for ctf,challs in modified.items():
+		notion = get_ctf(ctf).notion
+		if notion:
+			notion.update_to_notion(get_ctf(ctf), challs)
+	for ctf in ctfs.values():
+		ctf.notion.update_from_notion(ctf, modified.get(ctf))
 	print (events)
