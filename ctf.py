@@ -217,10 +217,11 @@ while True:
 			print ("Unknown type: %s" % e['type'])
 		last_event_id = e['id']
 		ret = msg_handler(e['message'])
-		if modified.get(ret[0]):
-			modified[ret[0]].append(ret[1])
-		else:
-			modified[ret[0]] = [ret[1]]
+		if ret:
+			if modified.get(ret[0]):
+				modified[ret[0]].append(ret[1])
+			else:
+				modified[ret[0]] = [ret[1]]
 	for ctf,challs in modified.items():
 		notion = get_ctf(ctf).notion
 		if notion:
