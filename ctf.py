@@ -227,5 +227,6 @@ while True:
 		if notion:
 			notion.update_to_notion(get_ctf(ctf), challs)
 	for ctf in ctfs.values():
-		ctf.notion.update_from_notion(ctf, modified.get(ctf))
+		if ctf.notion:
+			ctf.notion.update_from_notion(ctf, modified.get(ctf))
 	print (events)
