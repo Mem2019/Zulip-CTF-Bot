@@ -137,6 +137,12 @@ def addNotion(stream, subject, msg, args):
 		send_message(stream, subject, "Error, failed to create notion")
 		raise e
 
+def new_topic(stream, subject, msg, args):
+	ctf = get_ctf(stream)
+	for category_name, challs in ctf.challenges.items():
+		for chall in challs.keys():
+			send_message(stream, category_name + '-' + chall, "Topic for %s" % chall)
+
 def helper(stream, subject, msg, args):
 	send_message(stream, subject, """
 ac/addchallenge/addchall [category] [name]: add a new challenge
@@ -146,6 +152,8 @@ s/status: inspect status of current CTF
 ls/links: summarize all links sent in current topic
 fs/files: summarize all files uploaded in current topic
 h/helper: show this helper message
+notion [link]: add notion link
+nt/newtopic: create topic for challenges that have no topic yet
 """)
 
 cmd_processor = dict(
@@ -155,15 +163,16 @@ cmd_processor = dict(
 	s=status, status=status,
 	ls=get_links, links=get_links,
 	fs=get_files, files=get_files,
-	gd=addNotion, googledoc=addNotion,
-	h=helper, help=helper)
+	notion=addNotion,
+	h=helper, help=helper,
+	nt=new_topic, newtopic=new_topic)
 
 def proc_cmd(stream, subject, msg, cmd):
 	f = cmd_processor.get(cmd[0].lower())
 	if f:
 		return f(stream, subject, msg, cmd[1:])
 
-reaction = {"丁佬强不强":"丁佬太强了", "成功":"失败"}
+reaction = {"丁佬强不强":"丁佬太强了"}
 
 file_regex = "\\[.*\\]\\(((https:\\/\\/)?[a-zA-Z0-9_].zulipchat.com)?/user_uploads.*\\)"
 link_regex = "(https?:\\/\\/)?(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)"

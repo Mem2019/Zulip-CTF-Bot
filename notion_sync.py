@@ -40,9 +40,9 @@ class NotionCTF:
 			updated = []
 		rows = self.cv.collection.get_rows()
 		for row in rows:
-			if row.Name is None or row.Type is None or row.Status is None:
+			if row.Name is None or row.Type is None or row.Status is None or row.Type == []:
 				continue
-			if row.Type.lower() + '-' + row.Name in updated:
+			if row.Type[0].lower() + '-' + row.Name in updated:
 				continue
 			chall = ctf.get_chall(row.Type.lower(), row.Name)
 			chall.solved = NotionCTF._get_status(row.Status)
@@ -63,6 +63,19 @@ class NotionCTF:
 			if r2:
 				candidates.append(r2)
 		row.Candidates = candidates
+
+	TO_CATEGORY = set(['reverse', 'misc', 'pwn', 'web', 'shellcoding', 'osint', 'reverse', 'programming', 'crypto'])
+	CATEGORY_ALIAS = dict(rev='reverse',code='shellcoding', prog='programming')
+	def _to_notion_category(category):
+		category = category.lower()
+		if category in NotionCTF.TO_CATEGORY:
+			return category
+		if NotionCTF.CATEGORY_ALIAS.get(category):
+			return NotionCTF.CATEGORY_ALIAS.get(category)
+		for c in NotionCTF.TO_CATEGORY:
+			if c.find(category) == 0:
+				return c
+		return 'unknown'
 
 	# update challenges in `to_update` to notion
 	# if the challenge does not exist, create one first
@@ -85,5 +98,5 @@ class NotionCTF:
 				challenge = ctf.get_chall(category, name)
 				row = self.cv.collection.add_row()
 				row.Name = name
-				row.Type = category
+				row.Type = [NotionCTF._to_notion_category(category)]
 				self._update_row(row, challenge)
