@@ -45,7 +45,7 @@ class NotionCTF:
 				continue
 			if row.Type[0].lower() + '-' + row.Name in updated:
 				continue
-			chall = ctf.get_chall(row.Type.lower(), row.Name)
+			chall = ctf.get_chall(row.Type[0].lower(), row.Name)
 			chall.solved = NotionCTF._get_status(row.Status)
 			chall.workings = set(map(lambda x : x.given_name, row.Candidates))
 
