@@ -168,6 +168,8 @@ cmd_processor = dict(
 	nt=new_topic, newtopic=new_topic)
 
 def proc_cmd(stream, subject, msg, cmd):
+	if len(cmd) == 0:
+		return
 	f = cmd_processor.get(cmd[0].lower())
 	if f:
 		return f(stream, subject, msg, cmd[1:])
