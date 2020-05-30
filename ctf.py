@@ -237,11 +237,14 @@ while True:
 				modified[ret[0]].append(ret[1])
 			else:
 				modified[ret[0]] = [ret[1]]
-	for ctf,challs in modified.items():
-		notion = get_ctf(ctf).notion
-		if notion:
-			notion.update_to_notion(get_ctf(ctf), challs)
-	for ctf in ctfs.values():
-		if ctf.notion:
-			ctf.notion.update_from_notion(ctf, modified.get(ctf))
+	try:
+		for ctf,challs in modified.items():
+			notion = get_ctf(ctf).notion
+			if notion:
+				notion.update_to_notion(get_ctf(ctf), challs)
+		for ctf in ctfs.values():
+			if ctf.notion:
+				ctf.notion.update_from_notion(ctf, modified.get(ctf))
+	except Exception as e:
+		pass
 	print (events)
