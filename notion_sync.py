@@ -1,6 +1,7 @@
 from notion.client import NotionClient
 from notion.block import TodoBlock
 from notion.user import User
+from notion.collection import CollectionRowBlock
 import json
 import requests
 from ctf_type import *
@@ -16,7 +17,7 @@ class NotionCTF:
 			return ChallState.Progress
 	STATUS_TOSTR = ['in progress 🤔', 'stuck 😣', 'solved 😎']
 	def _set_status(status):
-		return NotionCTF.STATUS_TOSTR[status]
+		return NotionCTF.STATUS_TOSTR[status.value]
 	def _get_subscribers(client, token_v2):
 		r = requests.post("https://www.notion.so/api/v3/getSubscriptionData", \
 			json=({'spaceId': client.current_space.id}), \
@@ -46,7 +47,7 @@ class NotionCTF:
 				continue
 			chall = ctf.get_chall(row.Type.lower(), row.Name)
 			chall.solved = NotionCTF._get_status(row.Status)
-			chall.workings = map(lambda x : x.given_name, row.Candidates)
+			chall.workings = set(map(lambda x : x.given_name, row.Candidates))
 
 	def _get_user(self, name):
 		r = self.users.get(name)
@@ -96,7 +97,11 @@ class NotionCTF:
 				idx = to_update[i].find('-')
 				category, name = to_update[i][:idx], to_update[i][idx+1:]
 				challenge = ctf.get_chall(category, name)
-				row = self.cv.collection.add_row()
+				#row = self.cv.collection.add_row()
+				row_id = self.client.create_record("block", self.cv.collection, type="page")
+				row = CollectionRowBlock(self.client, row_id)
 				row.Name = name
 				row.Type = [NotionCTF._to_notion_category(category)]
+				self._update_row(row, challenge)
+				row.Type = category
 				self._update_row(row, challenge)
