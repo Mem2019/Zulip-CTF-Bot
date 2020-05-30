@@ -86,8 +86,8 @@ class NotionCTF:
 		visited = [False] * len(to_update)
 		for row in rows: # iterate over current rows
 			try:
-				idx = to_update.index(row.Type.lower() + '-' + row.Name)
-				challenge = ctf.get_chall(row.Type.lower(), row.Name)
+				idx = to_update.index(row.Type[0].lower() + '-' + row.Name)
+				challenge = ctf.get_chall(row.Type[0].lower(), row.Name)
 				self._update_row(row, challenge)
 				visited[idx] = True # update if in to_update
 			except Exception as e: # not in to_update
