@@ -103,5 +103,3 @@ class NotionCTF:
 				row.Name = name
 				row.Type = [NotionCTF._to_notion_category(category)]
 				self._update_row(row, challenge)
-				row.Type = category
-				self._update_row(row, challenge)
