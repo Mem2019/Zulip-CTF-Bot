@@ -101,7 +101,7 @@ def status(stream, subject, msg, args):
 		category = ctf.challenges[cate]
 		ret += "*** ------------- %s ------------- ***\n" % cate
 		for chall in category:
-			ret += "%s: %s" % (chall, ', '.join(category[chall].workings))
+			ret += "%s: %s" % (chall, ', '.join(list(map(str, category[chall].workings))))
 			if category[chall].solved == ChallState.Solved:
 				ret += " (solved!)"
 			elif category[chall].solved == ChallState.Stuck:
